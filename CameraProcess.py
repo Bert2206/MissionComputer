@@ -1,5 +1,6 @@
 import cv2
 from datetime import datetime
+import time
 
 # Strumień GStreamer do przechwytywania obrazu z kamery
 gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
@@ -14,13 +15,15 @@ if not cap.isOpened():
 # Pobranie natywnej rozdzielczości kamery
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-print(f"Rozdzielczość kamery: {frame_width}x{frame_height}")
+frame_rate = int(cap.get(cv2.CAP_PROP_FPS))  # Pobranie frame rate kamery
+if frame_rate == 0:
+    frame_rate = 30  # Domyślny frame rate, jeśli nie można odczytać z kamery
+
+print(f"Rozdzielczość kamery: {frame_width}x{frame_height}, Frame rate: {frame_rate} FPS")
 
 # Parametry kodowania H.264
 fourcc = cv2.VideoWriter_fourcc(*'H264')
-out = cv2.VideoWriter('output.mp4', fourcc, 30.0, (frame_width, frame_height))
-
-print("Nagrywanie rozpoczęte. Naciśnij Ctrl+C w terminalu, aby zatrzymać.")
+out = cv2.VideoWriter('output.mp4', fourcc, frame_rate, (frame_width, frame_height))
 
 try:
     frame_count = 0
@@ -42,6 +45,9 @@ try:
         # Co 100 klatek wypisz komunikat w konsoli
         if frame_count % 100 == 0:
             print(f"Nagrano {frame_count} klatek...")
+
+        # Dodaj opóźnienie, aby zsynchronizować z frame rate
+        time.sleep(1 / frame_rate)
 
 except KeyboardInterrupt:
     print("\nNagrywanie przerwane ręcznie.")
