@@ -1,44 +1,52 @@
 import cv2
+from datetime import datetime
 
 # Strumień GStreamer do przechwytywania obrazu z kamery
-gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! appsink ! video/x-raw format=BGR"
+gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
 
 # Przechwytywanie strumienia w OpenCV
 cap = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
 
 if not cap.isOpened():
-    print("Nie można otworzyć kamery")
+    print("Nie można otworzyć kamery. Sprawdź połączenie i konfigurację GStreamer.")
     exit()
 
-    # Parametry kodowania H.264 (lub H.265)
-    fourcc = cv2.VideoWriter_fourcc(*'H264')  # Możesz zmienić na 'H265' dla H.265
-    out = cv2.VideoWriter('output.mp4', fourcc, 30.0, (1280, 720))
+# Pobranie natywnej rozdzielczości kamery
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+print(f"Rozdzielczość kamery: {frame_width}x{frame_height}")
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("Nie można odczytać klatki")
-        break
+# Parametry kodowania H.264
+fourcc = cv2.VideoWriter_fourcc(*'H264')
+out = cv2.VideoWriter('output.mp4', fourcc, 30.0, (frame_width, frame_height))
 
-    # Nakładanie OSD - tekst z datą i godziną
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cv2.putText(frame, text, (10, 30), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+print("Nagrywanie rozpoczęte. Naciśnij Ctrl+C w terminalu, aby zatrzymać.")
 
-    # Zapisanie klatki (nagrywanie wideo)
-    out.write(frame)
+try:
+    frame_count = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Nie można odczytać klatki. Sprawdź połączenie.")
+            break
 
-    # Wyświetlanie podglądu z nałożonym OSD
-    cv2.imshow("Podgląd kamery", frame)
+        # Nakładanie OSD - tekst z datą i godziną
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cv2.putText(frame, text, (10, 30), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-# Wyjdź, jeśli naciśnięto 'q'
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        print("Zatrzymano nagrywanie")
-        break
+        # Zapisanie klatki (nagrywanie wideo)
+        out.write(frame)
+        frame_count += 1
 
-    # Wyświetlenie klatki w oknie
-    #cv2.imshow("Podgląd kamery", frame)
+        # Co 100 klatek wypisz komunikat w konsoli
+        if frame_count % 100 == 0:
+            print(f"Nagrano {frame_count} klatek...")
 
-cap.release()
-out.release()
-cv2.destroyAllWindows()
+except KeyboardInterrupt:
+    print("\nNagrywanie przerwane ręcznie.")
+
+finally:
+    cap.release()
+    out.release()
+    print("Zwolniono zasoby i zapisano plik output.mp4.")
