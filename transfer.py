@@ -16,14 +16,25 @@ if not cap.isOpened():
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 frame_rate = int(cap.get(cv2.CAP_PROP_FPS))  # Pobranie frame rate kamery
-if frame_rate ==0:
+if frame_rate == 0:
     frame_rate = 30  # Domyślny frame rate, jeśli nie można odczytać z kamery
 
 print(f"Rozdzielczość kamery: {frame_width}x{frame_height}, Frame rate: {frame_rate} FPS")
 
-# Parametry kodowania H.264
-fourcc = cv2.VideoWriter_fourcc(*'H264')
-out = cv2.VideoWriter('output.mp4', fourcc, frame_rate, (frame_width, frame_height))
+# Strumień GStreamer do wysyłania wideo przez UDP z użyciem sprzętowego kodeka H.264
+udp_pipeline = (
+    f"appsrc ! video/x-raw,format=BGR,width={frame_width},height={frame_height},framerate={frame_rate}/1 ! "
+    "videoconvert ! video/x-raw,format=I420 ! x264enc tune=zerolatency bitrate=500 speed-preset=ultrafast ! h264parse ! rtph264pay config-interval=1 pt=96 ! "
+    "udpsink host=192.168.1.104 port=5000"
+)
+
+# VideoWriter z GStreamer jako wyjście
+out = cv2.VideoWriter(udp_pipeline, cv2.CAP_GSTREAMER, 0, frame_rate, (frame_width, frame_height), True)
+
+if not out.isOpened():
+    print("Nie można otworzyć wyjścia GStreamer. Sprawdź konfigurację.")
+    cap.release()
+    exit()
 
 try:
     frame_count = 0
@@ -38,19 +49,21 @@ try:
         text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cv2.putText(frame, text, (10, 30), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
-        # Zapisanie klatki (nagrywanie wideo)
+        # Wysyłanie klatki przez UDP
         out.write(frame)
         frame_count += 1
 
         # Co 100 klatek wypisz komunikat w konsoli
         if frame_count % 100 == 0:
-            print(f"Nagrano {frame_count} klatek...")
+            print(f"Wysłano {frame_count} klatek...")
 
+        # Dodaj opóźnienie, aby zsynchronizować z frame rate
+        time.sleep(1 / frame_rate)
 
 except KeyboardInterrupt:
-    print("\nNagrywanie przerwane ręcznie.")
+    print("\nStrumieniowanie przerwane ręcznie.")
 
 finally:
     cap.release()
     out.release()
-    print("Zwolniono zasoby i zapisano plik output.mp4.")
+    print("Zwolniono zasoby i zakończono strumieniowanie.")
