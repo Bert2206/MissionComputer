@@ -15,18 +15,21 @@ if not cap.isOpened():
 # Pobranie natywnej rozdzielczości kamery
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-frame_rate = int(cap.get(cv2.CAP_PROP_FPS))  # Pobranie frame rate kamery
+frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
 if frame_rate == 0:
-    frame_rate = 30  # Domyślny frame rate, jeśli nie można odczytać z kamery
+    frame_rate = 30
 
 print(f"Rozdzielczość kamery: {frame_width}x{frame_height}, Frame rate: {frame_rate} FPS")
 
-# Strumień GStreamer do wysyłania wideo przez UDP z użyciem sprzętowego kodeka H.264
+# Strumień GStreamer do wysyłania wideo przez UDP
 udp_pipeline = (
     f"appsrc ! video/x-raw,format=BGR,width={frame_width},height={frame_height},framerate={frame_rate}/1 ! "
-    "videoconvert ! video/x-raw,format=I420 ! x264enc tune=zerolatency bitrate=500 speed-preset=ultrafast ! h264parse ! rtph264pay config-interval=1 pt=96 ! "
+    "videoconvert ! video/x-raw,format=I420 ! x264enc tune=zerolatency bitrate=5000 speed-preset=ultrafast ! h264parse ! rtph264pay config-interval=1 pt=96 ! "
     "udpsink host=192.168.1.104 port=5000"
 )
+
+#omxh264enc target-bitrate=500000 speed-preset=ultrafast,  v4l2h264enc #kodeki sprzętowe
+#kodek x264enc to kodek programowy
 
 # VideoWriter z GStreamer jako wyjście
 out = cv2.VideoWriter(udp_pipeline, cv2.CAP_GSTREAMER, 0, frame_rate, (frame_width, frame_height), True)
@@ -47,7 +50,7 @@ try:
         # Nakładanie OSD - tekst z datą i godziną
         font = cv2.FONT_HERSHEY_SIMPLEX
         text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        cv2.putText(frame, text, (10, 30), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
 
         # Wysyłanie klatki przez UDP
         out.write(frame)
@@ -67,3 +70,5 @@ finally:
     cap.release()
     out.release()
     print("Zwolniono zasoby i zakończono strumieniowanie.")
+
+    #gst-inspect-1.0 | grep 264 #sprawdzanie dostępnych elementów gstreamer
