@@ -28,6 +28,7 @@ udp_pipeline = (
     "udpsink host=192.168.1.104 port=5000"
 )
 
+
 #omxh264enc target-bitrate=500000 speed-preset=ultrafast,  v4l2h264enc #kodeki sprzętowe
 #kodek x264enc to kodek programowy
 
@@ -50,7 +51,8 @@ try:
         # Nakładanie OSD - tekst z datą i godziną
         font = cv2.FONT_HERSHEY_SIMPLEX
         text = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+        position = (10, 50)
+        cv2.putText(frame, text, position, font, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
         # Wysyłanie klatki przez UDP
         out.write(frame)
