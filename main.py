@@ -2,6 +2,8 @@ import sys
 import time
 import cv2
 
+gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
+
 tracker_type = 'CSRT'
 div = 1
 camera_fov = 42
@@ -42,14 +44,14 @@ def calculate_angular_deviation(frame_width, bbox):
     return angle
 
 if __name__ == '__main__':
-    cv2.namedWindow("Tracking")
-    cv2.setMouseCallback("Tracking", click_event)
+    # cv2.namedWindow("Tracking")
+    # cv2.setMouseCallback("Tracking", click_event)
 
     with open("dane.txt", "w") as plik:
         plik.write("x\ty\n")
         plik.close()
 
-    video = cv2.VideoCapture('1.mp4')
+    video = cv2.VideoCapture(gst_pipeline, cv2.CAP_GSTREAMER)
     if not video.isOpened():
         print("Could not open video")
         sys.exit()
@@ -59,12 +61,28 @@ if __name__ == '__main__':
         print("Cannot read video file")
         sys.exit()
 
-    f_sz = int(frame.shape[1])
-    f_w = int(frame.shape[0])
-    frame = cv2.resize(frame, (int(f_sz / div), int(f_w / div)), interpolation=cv2.INTER_AREA)
-    print('Input resolution: ' + str(f_sz) + ' x ' + str(f_w))
+    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    frame_rate = int(video.get(cv2.CAP_PROP_FPS))
+    if frame_rate == 0:
+        frame_rate = 30
+    frame = cv2.resize(frame, (int(frame_width / div), int(frame_height / div)), interpolation=cv2.INTER_AREA)
+    print(f"Rozdzielczość kamery: {frame_width}x{frame_height}, Frame rate: {frame_rate} FPS")
 
-    bbox = (int(f_sz / div / 2), int(f_w / div / 2), 30, 30)
+    udp_pipeline = (
+    f"appsrc ! video/x-raw,format=BGR,width={frame_width},height={frame_height},framerate={frame_rate}/1 ! "
+    "videoconvert ! video/x-raw,format=I420 ! x264enc tune=zerolatency bitrate=5000 speed-preset=ultrafast ! h264parse ! rtph264pay config-interval=1 pt=96 ! "
+    "udpsink host=192.168.1.104 port=5000"
+)
+
+    out = cv2.VideoWriter(udp_pipeline, cv2.CAP_GSTREAMER, 0, frame_rate, (frame_width, frame_height), True)
+
+    if not out.isOpened():
+        print("Nie można otworzyć wyjścia GStreamer. Sprawdź konfigurację.")
+        video.release()
+        exit()
+
+    bbox = (int(frame_width / div / 2), int(frame_height / div / 2), 30, 30)
     init_tracker()
 
     while True:
@@ -74,7 +92,7 @@ if __name__ == '__main__':
         if not ok:
             break
 
-        frame = cv2.resize(frame, (int(f_sz / div), int(f_w / div)), interpolation=cv2.INTER_AREA)
+        frame = cv2.resize(frame, (int(frame_width / div), int(frame_height / div)), interpolation=cv2.INTER_AREA)
 
         ok, bbox = tracker.update(frame)
 
@@ -84,7 +102,7 @@ if __name__ == '__main__':
             p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
             cv2.rectangle(frame, p1, p2, (255, 0, 0), 2, 1)
 
-            angle = calculate_angular_deviation(f_sz, bbox)
+            angle = calculate_angular_deviation(frame_width, bbox)
             cv2.putText(frame, f"Angle: {angle:.2f} degrees", (100, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
         else:
             cv2.putText(frame, "Tracking failure", (100, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
@@ -92,8 +110,7 @@ if __name__ == '__main__':
         frame = detect_obstacles(frame)
 
         cv2.putText(frame, tracker_type + " Tracker", (100, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (50, 170, 50), 2)
-
-        cv2.imshow("Tracking", frame)
+        out.write(frame)
 
         with open("dane.txt", "a") as plik:
             plik.write(str(int(bbox[0])) + "\t" + str(int(bbox[1])) + "\n")
@@ -105,3 +122,5 @@ if __name__ == '__main__':
         k = cv2.waitKey(1) & 0xff
         if k == 27:
             break
+    video.release()
+    out.release()
