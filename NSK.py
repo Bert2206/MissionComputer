@@ -76,6 +76,10 @@ class VideoPlayer(QMainWindow):
             # Odczyt osi joysticka
             axis_x = self.joystick.get_axis(0)  # Oś X
             axis_y = self.joystick.get_axis(1)  # Oś Y
+            if abs(axis_x)<0.05: #Zerowanie niewielkich odchylen - potrzebne bo przy poczatkowej pozycji galki byla inna wartosc niz 0.00
+                axis_x = 0.00
+            if abs(axis_y)<0.05:
+                axis_y = 0.00
             print(f"Joystick Axis: X={axis_x:.2f}, Y={axis_y:.2f}")
 
             # Odczyt przycisków joysticka
