@@ -54,19 +54,28 @@ def calculate_angular_deviation(frame_width, bbox):
 ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
 master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
 
+def calculate_checksum(data):
+    """Wylicz sumę kontrolną (Checksum) jako sumę modulo 65536."""
+    return sum(data) & 0xFFFF
+
 def send_angle_mavlink(ser, angle, packet_seq):
     # Tworzenie wiadomości MAVLink
-    msg = master.mav.attitude_encode(
-        Header = 0xFE,
-        PayloadLength = 4,
-        PacketSequence = packet_seq % 256,
-        SystemID = 3,
-        ComponentID = 2,
-        MessageID = 1,
-        Payload = struct.pack('<f', angle) + b'\x00' * 4
-    )
+    
+    Header = 0xFE,
+    PayloadLength = 4,
+    PacketSequence = packet_seq % 256,
+    SystemID = 3,
+    ComponentID = 2,
+    MessageID = 1,
+    Payload = struct.pack('<f', angle) + b'\x00' * 4
+    
     # Serializacja i wysyłanie wiadomości przez UART
-    packet = msg.pack(master.mav)
+    packet = struct.pack('<BBBBBB', Header, PayloadLength, PacketSequence, SystemID, ComponentID, MessageID) + Payload
+
+    checksum = calculate_checksum(frame[3:])
+
+    packet += struct.pack('<H', checksum)
+
     ser.write(packet)
 
 if __name__ == '__main__':
