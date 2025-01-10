@@ -1,8 +1,15 @@
 import sys
 import time
 import cv2
+import serial
+import struct
+from pymavlink import mavutil
 
 gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
+
+# Parametry UART
+uart_port = '/dev/serial0'  # Port UART na Raspberry Pi 4
+baudrate = 57600
 
 tracker_type = 'CSRT'
 div = 1
@@ -42,6 +49,25 @@ def calculate_angular_deviation(frame_width, bbox):
     offset_x = object_center_x - frame_center_x
     angle = (offset_x / frame_width) * camera_fov
     return angle
+
+# Inicjalizacja MAVLink i UART
+ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
+master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
+
+def send_angle_mavlink(ser, angle, packet_seq):
+    # Tworzenie wiadomości MAVLink
+    msg = master.mav.attitude_encode(
+        Header = 0xFE,
+        PayloadLength = 4,
+        PacketSequence = packet_seq % 256,
+        SystemID = 3,
+        ComponentID = 2,
+        MessageID = 1,
+        Payload = struct.pack('<f', angle) + b'\x00' * 4
+    )
+    # Serializacja i wysyłanie wiadomości przez UART
+    packet = msg.pack(master.mav)
+    ser.write(packet)
 
 if __name__ == '__main__':
     # cv2.namedWindow("Tracking")
@@ -85,6 +111,8 @@ if __name__ == '__main__':
     bbox = (int(frame_width / div / 2), int(frame_height / div / 2), 30, 30)
     init_tracker()
 
+    packet_seq = 0
+
     while True:
         loop_start_time = time.time()
 
@@ -104,6 +132,10 @@ if __name__ == '__main__':
 
             angle = calculate_angular_deviation(frame_width, bbox)
             cv2.putText(frame, f"Angle: {angle:.2f} degrees", (100, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
+            
+            send_angle_mavlink(ser, angle, packet_seq)
+            packet_seq += 1
+            
         else:
             cv2.putText(frame, "Tracking failure", (100, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
 
@@ -124,3 +156,4 @@ if __name__ == '__main__':
             break
     video.release()
     out.release()
+    ser.close()
