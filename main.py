@@ -3,12 +3,13 @@ import time
 import cv2
 import serial
 import struct
+import socket
+import threading
 from pymavlink import mavutil
 
 gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
 
-# Parametry UART
-uart_port = '/dev/serial0'  # Port UART na Raspberry Pi 4
+uart_port = '/dev/serial0' 
 baudrate = 57600
 
 tracker_type = 'CSRT'
@@ -22,12 +23,21 @@ def init_tracker():
     tracker = cv2.TrackerCSRT_create()
     tracker.init(frame, bbox)
 
-def click_event(event, x, y, flags, param):
-    global frame, bbox, tracker
-    if event == cv2.EVENT_LBUTTONDOWN:
-        k = 2
-        bbox = (int(x - 15 * k / div), int(y - 15 * k / div), int(30 * k / div), int(30 * k / div))
-        init_tracker()
+def udp_listener():
+    global bbox, udp_data_received
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(("0.0.0.0", 12345))  # Nasłuchuj na porcie 12345
+    print("Listening for UDP data on port 12345...")
+    while True:
+        data, _ = sock.recvfrom(1024)
+        try:
+            x, y = map(int, data.decode('utf-8').split(','))
+            k = 2  # Skala obszaru śledzenia
+            bbox = (int(x - 15 * k / div), int(y - 15 * k / div), int(30 * k / div), int(30 * k / div))
+            udp_data_received = True
+            init_tracker()
+        except Exception as e:
+            print(f"Error parsing UDP data: {e}")
 
 def detect_obstacles(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -50,7 +60,6 @@ def calculate_angular_deviation(frame_width, bbox):
     angle = (offset_x / frame_width) * camera_fov
     return angle
 
-# Inicjalizacja MAVLink i UART
 ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
 master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
 
@@ -59,7 +68,6 @@ def calculate_checksum(data):
     return sum(data) & 0xFFFF
 
 def send_angle_mavlink(ser, angle, packet_seq):
-    # Tworzenie wiadomości MAVLink
     
     Header = 0xFE,
     PayloadLength = 4,
@@ -69,11 +77,9 @@ def send_angle_mavlink(ser, angle, packet_seq):
     MessageID = 1,
     Payload = struct.pack('<f', angle) + b'\x00' * 4
     
-    # Serializacja i wysyłanie wiadomości przez UART
     packet = struct.pack('<BBBBBB', Header, PayloadLength, PacketSequence, SystemID, ComponentID, MessageID) + Payload
 
     checksum = calculate_checksum(packet[3:])
-
     packet += struct.pack('<H', checksum)
 
     ser.write(packet)
@@ -118,7 +124,11 @@ if __name__ == '__main__':
         exit()
 
     bbox = (int(frame_width / div / 2), int(frame_height / div / 2), 30, 30)
+    udp_data_received = False  # Flaga odbioru danych UDP
     init_tracker()
+
+    udp_thread = threading.Thread(target=udp_listener, daemon=True)
+    udp_thread.start()
 
     packet_seq = 0
 
@@ -131,6 +141,9 @@ if __name__ == '__main__':
 
         frame = cv2.resize(frame, (int(frame_width / div), int(frame_height / div)), interpolation=cv2.INTER_AREA)
 
+        if udp_data_received:
+            udp_data_received = False
+            
         ok, bbox = tracker.update(frame)
 
         if ok:

@@ -5,6 +5,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtCore import QUrl, Qt, QTimer
 from PySide6.QtGui import QMouseEvent
 import pygame
+import socket
 
 
 class VideoPlayer(QMainWindow):
@@ -55,6 +56,10 @@ class VideoPlayer(QMainWindow):
         self.timer.timeout.connect(self.poll_joystick)
         self.timer.start(50)  # Poll joystick every 50 ms
 
+        # Create UDP socket
+        self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udp_target = ("127.0.0.1", 12345)  # Replace with your desired IP and port
+
     def init_joystick(self):
         """Initialize the joystick using pygame."""
         pygame.init()
@@ -99,7 +104,9 @@ class VideoPlayer(QMainWindow):
     def on_pixel_clicked(self, x, y):
         # Handle pixel click coordinates
         print(f"Pixel clicked at: ({x}, {y})")
-        # Możesz zaktualizować widok mapy w odpowiedzi na kliknięcie wideo, jeśli to potrzebne.
+        # Send coordinates over UDP
+        message = f"{x},{y}".encode('utf-8')
+        self.udp_socket.sendto(message, self.udp_target)
 
 
 class CustomVideoWidget(QVideoWidget):
