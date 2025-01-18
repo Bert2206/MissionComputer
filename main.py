@@ -26,12 +26,12 @@ def init_tracker():
 def udp_listener():
     global bbox, udp_data_received
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(("0.0.0.0", 12345))  # Nasłuchuj na porcie 12345
-    print("Listening for UDP data on port 12345...")
+    sock.bind(("192.168.1.2", 12345))
+    
     while True:
         data, _ = sock.recvfrom(1024)
         try:
-            x, y = map(int, data.decode('utf-8').split(','))
+            x, y = struct.unpack('dd', data[8:])
             k = 2  # Skala obszaru śledzenia
             bbox = (int(x - 15 * k / div), int(y - 15 * k / div), int(30 * k / div), int(30 * k / div))
             udp_data_received = True
@@ -64,8 +64,15 @@ ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
 master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
 
 def calculate_checksum(data):
-    """Wylicz sumę kontrolną (Checksum) jako sumę modulo 65536."""
-    return sum(data) & 0xFFFF
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 0x0001:
+                crc = (crc >> 1) ^ 0x8408
+            else:
+                crc >>= 1
+    return crc & 0xFFFF
 
 def send_angle_mavlink(ser, angle, packet_seq):
     
