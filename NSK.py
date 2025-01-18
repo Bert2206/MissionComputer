@@ -58,7 +58,8 @@ class VideoPlayer(QMainWindow):
 
         # Create UDP socket
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_target = ("127.0.0.1", 12345)  # Replace with your desired IP and port
+        self.udp_socket.bind(("192.168.1.1", 12345))  # NSK
+        self.udp_target = ("192.168.1.2", 12345)  # KM
 
     def init_joystick(self):
         """Initialize the joystick using pygame."""
@@ -105,8 +106,16 @@ class VideoPlayer(QMainWindow):
         # Handle pixel click coordinates
         print(f"Pixel clicked at: ({x}, {y})")
         # Send coordinates over UDP
-        message = f"{x},{y}".encode('utf-8')
-        self.udp_socket.sendto(message, self.udp_target)
+        source_port = 12345  #  (NSK)
+        destination_port = 12345  #  (KM)
+        payload = struct.pack('dd', float(x), float(y))
+        length = 8 + len(payload)  # (8 bajtow + payload)
+        checksum = 0 # W naszym wypadku opcjonalna i nie wiem czy ja wykorzystac
+
+        packet = struct.pack('!HHHH', source_port, destination_port, length, checksum) + payload
+
+        # Wysłanie ramki
+        self.udp_socket.sendto(packet, self.udp_target)
 
 
 class CustomVideoWidget(QVideoWidget):
