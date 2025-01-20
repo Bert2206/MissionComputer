@@ -58,8 +58,8 @@ class VideoPlayer(QMainWindow):
 
         # Create UDP socket
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_socket.bind(("192.168.1.1", 12345))  # NSK
-        self.udp_target = ("192.168.1.2", 12345)  # KM
+        self.udp_socket.bind(("127.0.0.1", 12345))  # NSK
+        self.udp_target = ("0.0.0.0", 12345)  # KM
 
     def init_joystick(self):
         """Initialize the joystick using pygame."""
