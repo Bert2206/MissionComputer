@@ -4,28 +4,26 @@ import cv2
 import serial
 import struct
 import socket
-import threading
 import random
 import math
 from pymavlink import mavutil
 
 gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
 
-#UART
-uart_port = '/dev/serial0' 
+# Parametry UART
+uart_port = '/dev/serial0'  # Port UART, który działał na Raspberry Pi 4 -.-
 baudrate = 57600
 
-#UDP
 sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock2.udp_socket.bind(("192.168.1.2", 12345))  # KM
-sock2.udp_target = ("192.168.1.1", 12345)  # NSK
+sock2.bind(("0.0.0.0", 12345))  # KM
+udp_target = ("127.0.0.1", 12345)  # NSK
 
 tracker_type = 'CSRT'
 div = 1
 camera_fov = 42
 target_fps = 5
 frame_duration = 1.0 / target_fps
-
+    
 def init_tracker():
     global tracker
     tracker = cv2.TrackerCSRT_create()
@@ -33,11 +31,9 @@ def init_tracker():
 
 def udp_listener():
     global bbox, udp_data_received
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(("192.168.1.2", 12345))
     
     while True:
-        data, _ = sock.recvfrom(1024)
+        data, _ = sock2.recvfrom(1024)
         try:
             x, y = struct.unpack('dd', data[8:])
             k = 2  # Skala obszaru śledzenia
@@ -68,6 +64,7 @@ def calculate_angular_deviation(frame_width, bbox):
     angle = (offset_x / frame_width) * camera_fov
     return angle
 
+# Inicjalizacja MAVLink i UART
 ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
 master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
 
@@ -83,22 +80,25 @@ def calculate_checksum(data):
     return crc & 0xFFFF
 
 def send_angle_mavlink(ser, angle, packet_seq):
-    # Wysylanie kata poprzez UART
-    Header = 0xFE,
-    PayloadLength = 4,
-    PacketSequence = packet_seq % 256,
-    SystemID = 3,
-    ComponentID = 2,
-    MessageID = 1,
+    # Tworzenie wiadomości MAVLink
+    
+    Header = 0xFE
+    PayloadLength = 4
+    PacketSequence = packet_seq % 256
+    SystemID = 3
+    ComponentID = 2
+    MessageID = 1
     Payload = struct.pack('<f', angle) + b'\x00' * 4
     
+    # Serializacja i wysyłanie wiadomości przez UART
     packet = struct.pack('<BBBBBB', Header, PayloadLength, PacketSequence, SystemID, ComponentID, MessageID) + Payload
 
     checksum = calculate_checksum(packet[3:])
+
     packet += struct.pack('<H', checksum)
 
     ser.write(packet)
-    
+
 class GNSS_Emulator:
     def __init__(self, start_lat, start_lon):
         self.latitude = start_lat
@@ -112,11 +112,11 @@ class GNSS_Emulator:
         self.heading %= 360
 
         # Update velocity randomly to simulate acceleration or deceleration
-        self.velocity += random.uniform(-1, 1)*1.94384  # zamiana z m/s na wezly
+        self.velocity += random.uniform(-1, 1)* 1.94384  # zamiana z m/s na wezly
         self.velocity = max(0, min(self.velocity, 30))  # ogranicznie max 30 wezlow
 
         # Calculate new position based on current velocity and heading
-        distance = self.velocity
+        distance = self.velocity  # Assuming update interval of 1 second (velocity = distance / time)
         delta_lat = distance * math.cos(math.radians(self.heading)) / 111320  # Convert meters to degrees latitude
         delta_lon = distance * math.sin(math.radians(self.heading)) / (111320 * math.cos(math.radians(self.latitude)))
 
@@ -133,7 +133,8 @@ class GNSS_Emulator:
         }
     
 def send_GNSS(la, lo, vel, heading):
-        # Wysylanie danych z GNSS poprzez UDP
+
+        # Send coordinates over UDP
         source_port = 12345  #  (KM)
         destination_port = 12345  #  (NSK)
         payload = struct.pack('dddd', float(la), float(lo), float(vel), float(heading))
@@ -142,7 +143,7 @@ def send_GNSS(la, lo, vel, heading):
 
         packet = struct.pack('!HHHH', source_port, destination_port, length, checksum) + payload
 
-        sock2.udp_socket.sendto(packet, sock2.udp_target)
+        sock2.sendto(packet, udp_target)
 
 if __name__ == '__main__':
     # cv2.namedWindow("Tracking")
@@ -184,11 +185,7 @@ if __name__ == '__main__':
         exit()
 
     bbox = (int(frame_width / div / 2), int(frame_height / div / 2), 30, 30)
-    udp_data_received = False  # Flaga odbioru danych UDP
     init_tracker()
-
-    udp_thread = threading.Thread(target=udp_listener, daemon=True)
-    udp_thread.start()
 
     packet_seq = 0
 
@@ -204,9 +201,6 @@ if __name__ == '__main__':
 
         frame = cv2.resize(frame, (int(frame_width / div), int(frame_height / div)), interpolation=cv2.INTER_AREA)
 
-        if udp_data_received:
-            udp_data_received = False
-            
         ok, bbox = tracker.update(frame)
 
         dataGNSS = emulator.get_gnss_data()
@@ -242,7 +236,6 @@ if __name__ == '__main__':
         k = cv2.waitKey(1) & 0xff
         if k == 27:
             break
-            
     video.release()
     out.release()
     ser.close()
