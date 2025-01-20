@@ -6,7 +6,7 @@ import struct
 import socket
 import random
 import math
-from pymavlink import mavutil
+#from pymavlink import mavutil
 
 gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
 
@@ -15,8 +15,8 @@ uart_port = '/dev/serial0'  # Port UART, który działał na Raspberry Pi 4 -.-
 baudrate = 57600
 
 sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock2.bind(("0.0.0.0", 12345))  # KM
-udp_target = ("127.0.0.1", 12345)  # NSK
+sock2.bind(("192.168.1.121", 12345))  # KM
+udp_target = ("192.168.1.104", 12345)  # NSK
 
 tracker_type = 'CSRT'
 div = 1
@@ -34,14 +34,24 @@ def udp_listener():
     
     while True:
         data, _ = sock2.recvfrom(4096)
+        print(f"Otrzymana wiadomość RAW: {data}")
+
         try:
-            x, y = struct.unpack('dd', data[8:])
+            # Odczytujemy pierwsze 4 bajty jako nagłówek (opcjonalnie)
+            header = data[:4]
+            print(f"Nagłówek: {header}")
+
+            # Parsowanie liczb double z pozostałych danych
+            x, y = struct.unpack('dd', data[4:])
+            print(f"x: {x}, y: {y}")
+
+            # Obliczanie bbox
             k = 2  # Skala obszaru śledzenia
             bbox = (int(x - 15 * k / div), int(y - 15 * k / div), int(30 * k / div), int(30 * k / div))
             udp_data_received = True
             init_tracker()
         except Exception as e:
-            print(f"Error parsing UDP data: {e}")
+            print(f"Błąd podczas parsowania danych UDP: {e}")
 
 def detect_obstacles(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -65,8 +75,8 @@ def calculate_angular_deviation(frame_width, bbox):
     return angle
 
 # Inicjalizacja MAVLink i UART
-ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
-master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
+#ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
+#master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
 
 def calculate_checksum(data):
     crc = 0xFFFF
@@ -214,7 +224,7 @@ if __name__ == '__main__':
             angle = calculate_angular_deviation(frame_width, bbox)
             cv2.putText(frame, f"Angle: {angle:.2f} degrees", (100, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
             
-            send_angle_mavlink(ser, angle, packet_seq)
+            #send_angle_mavlink(ser, angle, packet_seq)
             send_GNSS(dataGNSS['latitude'],dataGNSS['longitude'],dataGNSS['velocity'],dataGNSS['heading'])
             packet_seq += 1
             
