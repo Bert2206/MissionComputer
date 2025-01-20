@@ -14,15 +14,16 @@ gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=B
 uart_port = '/dev/serial0'  # Port UART, który działał na Raspberry Pi 4 -.-
 baudrate = 57600
 
-sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock2.bind(("192.168.1.121", 12345))  # KM
-udp_target = ("192.168.1.104", 12345)  # NSK
-
 tracker_type = 'CSRT'
 div = 1
 camera_fov = 42
 target_fps = 5
 frame_duration = 1.0 / target_fps
+
+sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock2.bind(("192.168.1.121", 12345))  # KM
+udp_target = ("192.168.1.104", 12345)  # NSK
+
     
 def init_tracker():
     global tracker
@@ -34,24 +35,17 @@ def udp_listener():
     
     while True:
         data, _ = sock2.recvfrom(4096)
-        print(f"Otrzymana wiadomość RAW: {data}")
+        # Odczytujemy pierwsze 8 bajty jako nagłówek (opcjonalnie)
+        header = data[:8]
+        # Parsowanie liczb double z pozostałych danych
+        x, y = struct.unpack('dd', data[8:])
+        print(f"x: {x}, y: {y}")
 
-        try:
-            # Odczytujemy pierwsze 4 bajty jako nagłówek (opcjonalnie)
-            header = data[:4]
-            print(f"Nagłówek: {header}")
-
-            # Parsowanie liczb double z pozostałych danych
-            x, y = struct.unpack('dd', data[4:])
-            print(f"x: {x}, y: {y}")
-
-            # Obliczanie bbox
-            k = 2  # Skala obszaru śledzenia
-            bbox = (int(x - 15 * k / div), int(y - 15 * k / div), int(30 * k / div), int(30 * k / div))
-            udp_data_received = True
-            init_tracker()
-        except Exception as e:
-            print(f"Błąd podczas parsowania danych UDP: {e}")
+        # Obliczanie bbox
+        k = 2  # Skala obszaru śledzenia
+        bbox = (int(x - 15 * k / div), int(y - 15 * k / div), int(30 * k / div), int(30 * k / div))
+        udp_data_received = True
+        init_tracker()
 
 def detect_obstacles(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -186,7 +180,6 @@ if __name__ == '__main__':
     "videoconvert ! video/x-raw,format=I420 ! x264enc tune=zerolatency bitrate=5000 speed-preset=ultrafast ! h264parse ! rtph264pay config-interval=1 pt=96 ! "
     "udpsink host=192.168.1.104 port=5000"
 )
-
     out = cv2.VideoWriter(udp_pipeline, cv2.CAP_GSTREAMER, 0, frame_rate, (frame_width, frame_height), True)
 
     if not out.isOpened():
@@ -196,6 +189,7 @@ if __name__ == '__main__':
 
     bbox = (int(frame_width / div / 2), int(frame_height / div / 2), 30, 30)
     init_tracker()
+    #udp_listener()
 
     packet_seq = 0
 
