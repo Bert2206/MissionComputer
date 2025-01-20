@@ -1,0 +1,226 @@
+[33mFactory Details:[0m
+  [94mRank                     [0mprimary (256)[0m
+  [94mLong-name                [0mVideo (video4linux2) Source[0m
+  [94mKlass                    [0mSource/Video[0m
+  [94mDescription              [0mReads frames from a Video4Linux2 device[0m
+  [94mAuthor                   [0mEdgard Lima <edgard.lima@gmail.com>, Stefan Kost <ensonic@users.sf.net>[0m
+  [94mDocumentation            [0m[0mhttps://gstreamer.freedesktop.org/documentation/video4linux2/v4l2src.html[0m
+
+[33mPlugin Details[0m:
+  [94mName                     [0m[0mvideo4linux2[0m
+  [94mDescription              [0m[0melements for Video 4 Linux[0m
+  [94mFilename                 [0m[0m/lib/aarch64-linux-gnu/gstreamer-1.0/libgstvideo4linux2.so[0m
+  [94mVersion                  [0m[0m1.22.0[0m
+  [94mLicense                  [0m[0mLGPL[0m
+  [94mSource module            [0m[0mgst-plugins-good[0m
+  [94mDocumentation            [0m[0mhttps://gstreamer.freedesktop.org/documentation/video4linux2/[0m
+  [94mSource release date      [0m[0m2023-01-23[0m
+  [94mBinary package           [0m[0mGStreamer Good Plugins (Debian)[0m
+  [94mOrigin URL               [0m[0mhttps://tracker.debian.org/pkg/gst-plugins-good1.0[0m
+
+[32mGObject[0m
+ [95m+----[0m[32mGInitiallyUnowned[0m
+       [95m+----[0m[32mGstObject[0m
+             [95m+----[0m[32mGstElement[0m
+                   [95m+----[0m[32mGstBaseSrc[0m
+                         [95m+----[0m[32mGstPushSrc[0m
+                               [95m+----[0m[32mGstV4l2Src[0m
+
+[33mImplemented Interfaces[0m:
+  [32mGstURIHandler[0m
+  [32mGstTuner[0m
+  [32mGstColorBalance[0m
+  [32mGstVideoOrientation[0m
+
+[33mPad Templates[0m:
+  [94mSRC template[0m: [0m'src'[0m
+    [94mAvailability[0m: [0mAlways[0m
+    [94mCapabilities[0m:
+      [33mimage/jpeg[0m
+      [33mvideo/mpeg[0m
+        [36m    mpegversion[0m: [94m4[0m
+        [36m   systemstream[0m: [94mfalse[0m
+      [33mvideo/mpeg[0m
+        [36m    mpegversion[0m: [94m{ (int)1, (int)2 }[0m
+      [33mvideo/mpegts[0m
+        [36m   systemstream[0m: [94mtrue[0m
+      [33mvideo/x-bayer[0m
+        [36m         format[0m: [94m{ (string)bggr, (string)gbrg, (string)grbg, (string)rggb }[0m
+        [36m          width[0m: [94m[ 1, 32768 ][0m
+        [36m         height[0m: [94m[ 1, 32768 ][0m
+        [36m      framerate[0m: [94m[ 0/1, 2147483647/1 ][0m
+      [33mvideo/x-dv[0m
+        [36m   systemstream[0m: [94mtrue[0m
+      [33mvideo/x-fwht[0m
+      [33mvideo/x-h263[0m
+        [36m        variant[0m: [94mitu[0m
+      [33mvideo/x-h264[0m
+        [36m  stream-format[0m: [94m{ (string)byte-stream, (string)avc }[0m
+        [36m      alignment[0m: [94mau[0m
+      [33mvideo/x-h265[0m
+        [36m  stream-format[0m: [94mbyte-stream[0m
+        [36m      alignment[0m: [94mau[0m
+      [33mvideo/x-pwc1[0m
+        [36m          width[0m: [94m[ 1, 32768 ][0m
+        [36m         height[0m: [94m[ 1, 32768 ][0m
+        [36m      framerate[0m: [94m[ 0/1, 2147483647/1 ][0m
+      [33mvideo/x-pwc2[0m
+        [36m          width[0m: [94m[ 1, 32768 ][0m
+        [36m         height[0m: [94m[ 1, 32768 ][0m
+        [36m      framerate[0m: [94m[ 0/1, 2147483647/1 ][0m
+      [33mvideo/x-raw[0m
+        [36m         format[0m: [94m{ (string)RGB16, (string)BGR, (string)RGB, (string)ABGR, (string)xBGR, (string)RGBA, (string)RGBx, (string)GRAY8, (string)GRAY16_LE, (string)GRAY16_BE, (string)YVU9, (string)YV12, (string)YUY2, (string)YVYU, (string)UYVY, (string)Y42B, (string)Y41B, (string)YUV9, (string)NV12_64Z32, (string)NV12_8L128, (string)NV12_10BE_8L128, (string)NV24, (string)NV12_16L32S, (string)NV61, (string)NV16, (string)NV21, (string)NV12, (string)I420, (string)ARGB, (string)xRGB, (string)BGRA, (string)BGRx, (string)BGR15, (string)RGB15 }[0m
+        [36m          width[0m: [94m[ 1, 32768 ][0m
+        [36m         height[0m: [94m[ 1, 32768 ][0m
+        [36m      framerate[0m: [94m[ 0/1, 2147483647/1 ][0m
+      [33mvideo/x-sonix[0m
+        [36m          width[0m: [94m[ 1, 32768 ][0m
+        [36m         height[0m: [94m[ 1, 32768 ][0m
+        [36m      framerate[0m: [94m[ 0/1, 2147483647/1 ][0m
+      [33mvideo/x-vp8[0m
+      [33mvideo/x-vp9[0m
+      [33mvideo/x-wmv[0m
+        [36m     wmvversion[0m: [94m3[0m
+        [36m         format[0m: [94mWVC1[0m
+      [33mvideo/x-raw[0m([32mformat:Interlaced[0m)
+        [36m         format[0m: [94m{ (string)RGB16, (string)BGR, (string)RGB, (string)ABGR, (string)xBGR, (string)RGBA, (string)RGBx, (string)GRAY8, (string)GRAY16_LE, (string)GRAY16_BE, (string)YVU9, (string)YV12, (string)YUY2, (string)YVYU, (string)UYVY, (string)Y42B, (string)Y41B, (string)YUV9, (string)NV12_64Z32, (string)NV12_8L128, (string)NV12_10BE_8L128, (string)NV24, (string)NV12_16L32S, (string)NV61, (string)NV16, (string)NV21, (string)NV12, (string)I420, (string)ARGB, (string)xRGB, (string)BGRA, (string)BGRx, (string)BGR15, (string)RGB15 }[0m
+        [36m          width[0m: [94m[ 1, 32768 ][0m
+        [36m         height[0m: [94m[ 1, 32768 ][0m
+        [36m      framerate[0m: [94m[ 0/1, 2147483647/1 ][0m
+        [36m interlace-mode[0m: [94malternate[0m
+
+[0mElement has no clocking capabilities.[0m
+
+[33mURI handling capabilities:[0m
+  [0mElement can act as source.[0m
+  [0mSupported URI protocols[0m:
+    [36mv4l2[0m
+
+[33mPads:[0m
+  [94mSRC[0m: [0m'src'[0m
+    [94mPad Template[0m: [0m'src'[0m
+
+[33mElement Properties[0m:
+  [94mblocksize           [0m: [0mSize in bytes to read per buffer (-1 = default)[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mUnsigned Integer[0m. [33mRange[0m: [36m0 - 4294967295[0m [33mDefault[0m: [36m4096[0m 
+  [94mbrightness          [0m: [0mPicture brightness, or more precisely, the black level[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m, [36mcontrollable[0m
+                        [32mInteger[0m. [33mRange[0m: [36m-2147483648 - 2147483647[0m [33mDefault[0m: [36m0[0m 
+  [94mcontrast            [0m: [0mPicture contrast or luma gain[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m, [36mcontrollable[0m
+                        [32mInteger[0m. [33mRange[0m: [36m-2147483648 - 2147483647[0m [33mDefault[0m: [36m0[0m 
+  [94mcrop-bottom         [0m: [0mPixels to crop at bottom of video capture input[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mUnsigned Integer[0m. [33mRange[0m: [36m0 - 4294967295[0m [33mDefault[0m: [36m0[0m 
+  [94mcrop-bounds         [0m: [0mThe bounding region for crop rectangles ('<x, y, width, height>').[0m
+                        [33mflags[0m: [36mreadable[0m
+                        [36mDefault[0m: "< (int)0, (int)0, (int)0, (int)0 >"
+                        [0mGstValueArray of GValues of type[0m [32m"gint"[0m
+  [94mcrop-left           [0m: [0mPixels to crop at left of video capture input[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mUnsigned Integer[0m. [33mRange[0m: [36m0 - 4294967295[0m [33mDefault[0m: [36m0[0m 
+  [94mcrop-right          [0m: [0mPixels to crop at right of video capture input[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mUnsigned Integer[0m. [33mRange[0m: [36m0 - 4294967295[0m [33mDefault[0m: [36m0[0m 
+  [94mcrop-top            [0m: [0mPixels to crop at top of video capture input[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mUnsigned Integer[0m. [33mRange[0m: [36m0 - 4294967295[0m [33mDefault[0m: [36m0[0m 
+  [94mdevice              [0m: [0mDevice location[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mString[0m. [33mDefault[0m: [36m"/dev/video0"[0m
+  [94mdevice-fd           [0m: [0mFile descriptor of the device[0m
+                        [33mflags[0m: [36mreadable[0m
+                        [32mInteger[0m. [33mRange[0m: [36m-1 - 2147483647[0m [33mDefault[0m: [36m-1[0m 
+  [94mdevice-name         [0m: [0mName of the device[0m
+                        [33mflags[0m: [36mreadable[0m
+                        [32mString[0m. [33mDefault[0m: [36mnull[0m
+  [94mdo-timestamp        [0m: [0mApply current stream time to buffers[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mBoolean[0m. [33mDefault[0m: [36mfalse[0m
+  [94mextra-controls      [0m: [0mExtra v4l2 controls (CIDs) for the device[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [0mBoxed pointer of type[0m [32m"GstStructure"[0m
+  [94mflags               [0m: [0mDevice type flags[0m
+                        [33mflags[0m: [36mreadable[0m
+                        [32mFlags "GstV4l2DeviceTypeFlags"[0m [33mDefault[0m: [36m0x00000000, "(none)"[0m
+                           [33m(0x00000001)[0m: [36mcapture         [0m - [0mDevice supports video capture[0m
+                           [33m(0x00000002)[0m: [36moutput          [0m - [0mDevice supports video playback[0m
+                           [33m(0x00000004)[0m: [36moverlay         [0m - [0mDevice supports video overlay[0m
+                           [33m(0x00000010)[0m: [36mvbi-capture     [0m - [0mDevice supports the VBI capture[0m
+                           [33m(0x00000020)[0m: [36mvbi-output      [0m - [0mDevice supports the VBI output[0m
+                           [33m(0x00010000)[0m: [36mtuner           [0m - [0mDevice has a tuner or modulator[0m
+                           [33m(0x00020000)[0m: [36maudio           [0m - [0mDevice has audio inputs or outputs[0m
+  [94mforce-aspect-ratio  [0m: [0mWhen enabled, the pixel aspect ratio will be enforced[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mBoolean[0m. [33mDefault[0m: [36mtrue[0m
+  [94mhue                 [0m: [0mHue or color balance[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m, [36mcontrollable[0m
+                        [32mInteger[0m. [33mRange[0m: [36m-2147483648 - 2147483647[0m [33mDefault[0m: [36m0[0m 
+  [94mio-mode             [0m: [0mI/O mode[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mEnum "GstV4l2IOMode"[0m [33mDefault[0m: [36m0, "auto"[0m
+                           [33m(0)[0m: [36mauto            [0m - [0mGST_V4L2_IO_AUTO[0m
+                           [33m(1)[0m: [36mrw              [0m - [0mGST_V4L2_IO_RW[0m
+                           [33m(2)[0m: [36mmmap            [0m - [0mGST_V4L2_IO_MMAP[0m
+                           [33m(3)[0m: [36muserptr         [0m - [0mGST_V4L2_IO_USERPTR[0m
+                           [33m(4)[0m: [36mdmabuf          [0m - [0mGST_V4L2_IO_DMABUF[0m
+                           [33m(5)[0m: [36mdmabuf-import   [0m - [0mGST_V4L2_IO_DMABUF_IMPORT[0m
+  [94mname                [0m: [0mThe name of the object[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mString[0m. [33mDefault[0m: [36m"v4l2src0"[0m
+  [94mnorm                [0m: [0mvideo standard[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mEnum "V4L2_TV_norms"[0m [33mDefault[0m: [36m0, "none"[0m
+                           [33m(0)[0m: [36mnone            [0m - [0mnone[0m
+                           [33m(45056)[0m: [36mNTSC            [0m - [0mNTSC[0m
+                           [33m(4096)[0m: [36mNTSC-M          [0m - [0mNTSC-M[0m
+                           [33m(8192)[0m: [36mNTSC-M-JP       [0m - [0mNTSC-M-JP[0m
+                           [33m(32768)[0m: [36mNTSC-M-KR       [0m - [0mNTSC-M-KR[0m
+                           [33m(16384)[0m: [36mNTSC-443        [0m - [0mNTSC-443[0m
+                           [33m(255)[0m: [36mPAL             [0m - [0mPAL[0m
+                           [33m(7)[0m: [36mPAL-BG          [0m - [0mPAL-BG[0m
+                           [33m(1)[0m: [36mPAL-B           [0m - [0mPAL-B[0m
+                           [33m(2)[0m: [36mPAL-B1          [0m - [0mPAL-B1[0m
+                           [33m(4)[0m: [36mPAL-G           [0m - [0mPAL-G[0m
+                           [33m(8)[0m: [36mPAL-H           [0m - [0mPAL-H[0m
+                           [33m(16)[0m: [36mPAL-I           [0m - [0mPAL-I[0m
+                           [33m(224)[0m: [36mPAL-DK          [0m - [0mPAL-DK[0m
+                           [33m(32)[0m: [36mPAL-D           [0m - [0mPAL-D[0m
+                           [33m(64)[0m: [36mPAL-D1          [0m - [0mPAL-D1[0m
+                           [33m(128)[0m: [36mPAL-K           [0m - [0mPAL-K[0m
+                           [33m(256)[0m: [36mPAL-M           [0m - [0mPAL-M[0m
+                           [33m(512)[0m: [36mPAL-N           [0m - [0mPAL-N[0m
+                           [33m(1024)[0m: [36mPAL-Nc          [0m - [0mPAL-Nc[0m
+                           [33m(2048)[0m: [36mPAL-60          [0m - [0mPAL-60[0m
+                           [33m(16711680)[0m: [36mSECAM           [0m - [0mSECAM[0m
+                           [33m(65536)[0m: [36mSECAM-B         [0m - [0mSECAM-B[0m
+                           [33m(262144)[0m: [36mSECAM-G         [0m - [0mSECAM-G[0m
+                           [33m(524288)[0m: [36mSECAM-H         [0m - [0mSECAM-H[0m
+                           [33m(3276800)[0m: [36mSECAM-DK        [0m - [0mSECAM-DK[0m
+                           [33m(131072)[0m: [36mSECAM-D         [0m - [0mSECAM-D[0m
+                           [33m(1048576)[0m: [36mSECAM-K         [0m - [0mSECAM-K[0m
+                           [33m(2097152)[0m: [36mSECAM-K1        [0m - [0mSECAM-K1[0m
+                           [33m(4194304)[0m: [36mSECAM-L         [0m - [0mSECAM-L[0m
+                           [33m(8388608)[0m: [36mSECAM-Lc        [0m - [0mSECAM-Lc[0m
+  [94mnum-buffers         [0m: [0mNumber of buffers to output before sending EOS (-1 = unlimited)[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mInteger[0m. [33mRange[0m: [36m-1 - 2147483647[0m [33mDefault[0m: [36m-1[0m 
+  [94mparent              [0m: [0mThe parent of the object[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [0mObject of type[0m [32m"GstObject"[0m
+  [94mpixel-aspect-ratio  [0m: [0mOverwrite the pixel aspect ratio of the device[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m
+                        [32mString[0m. [33mDefault[0m: [36mnull[0m
+  [94msaturation          [0m: [0mPicture color saturation or chroma gain[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m, [36mcontrollable[0m
+                        [32mInteger[0m. [33mRange[0m: [36m-2147483648 - 2147483647[0m [33mDefault[0m: [36m0[0m 
+  [94mtypefind            [0m: [0mRun typefind before negotiating (deprecated, non-functional)[0m
+                        [33mflags[0m: [36mreadable[0m, [36mwritable[0m, [36mdeprecated[0m
+                        [32mBoolean[0m. [33mDefault[0m: [36mfalse[0m
+
+[33mElement Signals[0m:
+  [94m"prepare-format"[0m :  [32mvoid[0m user_function[0m ([32mGstElement[0m* object[0m,
+                                          [32mgint[0m arg0[0m,
+                                          [32mGstCaps[0m* arg1[0m,
+                                          [32mgpointer [0muser_data[0m);
