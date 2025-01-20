@@ -33,7 +33,7 @@ def udp_listener():
     global bbox, udp_data_received
     
     while True:
-        data, _ = sock2.recvfrom(1024)
+        data, _ = sock2.recvfrom(4096)
         try:
             x, y = struct.unpack('dd', data[8:])
             k = 2  # Skala obszaru śledzenia
