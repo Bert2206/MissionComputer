@@ -6,6 +6,7 @@ import struct
 import socket
 import random
 import math
+import threading
 #from pymavlink import mavutil
 
 gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
@@ -55,7 +56,7 @@ def detect_obstacles(frame):
 
     for contour in contours:
         area = cv2.contourArea(contour)
-        if area > 10000:
+        if area > 20000:
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
             cv2.putText(frame, "Obstacle", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
@@ -150,8 +151,8 @@ def send_GNSS(la, lo, vel, heading):
         sock2.sendto(packet, udp_target)
 
 if __name__ == '__main__':
-    # cv2.namedWindow("Tracking")
-    # cv2.setMouseCallback("Tracking", click_event)
+    udp_thread = threading.Thread(target=udp_listener, daemon=True)
+    udp_thread.start()
 
     with open("dane.txt", "w") as plik:
         plik.write("x\ty\n")
@@ -167,8 +168,8 @@ if __name__ == '__main__':
         print("Cannot read video file")
         sys.exit()
 
-    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    frame_width = 640#int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = 360#int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_rate = int(video.get(cv2.CAP_PROP_FPS))
     if frame_rate == 0:
         frame_rate = 30
@@ -189,7 +190,6 @@ if __name__ == '__main__':
 
     bbox = (int(frame_width / div / 2), int(frame_height / div / 2), 30, 30)
     init_tracker()
-    #udp_listener()
 
     packet_seq = 0
 
