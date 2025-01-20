@@ -6,7 +6,8 @@ import struct
 import socket
 import random
 import math
-from pymavlink import mavutil
+import threading
+#from pymavlink import mavutil
 
 gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=BGR ! appsink"
 
@@ -14,15 +15,16 @@ gst_pipeline = "v4l2src device=/dev/video0 ! videoconvert ! video/x-raw,format=B
 uart_port = '/dev/serial0'  # Port UART, który działał na Raspberry Pi 4 -.-
 baudrate = 57600
 
-sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock2.bind(("0.0.0.0", 12345))  # KM
-udp_target = ("127.0.0.1", 12345)  # NSK
-
 tracker_type = 'CSRT'
 div = 1
 camera_fov = 42
 target_fps = 5
 frame_duration = 1.0 / target_fps
+
+sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock2.bind(("192.168.1.121", 12345))  # KM
+udp_target = ("192.168.1.104", 12345)  # NSK
+
     
 def init_tracker():
     global tracker
@@ -34,14 +36,17 @@ def udp_listener():
     
     while True:
         data, _ = sock2.recvfrom(4096)
-        try:
-            x, y = struct.unpack('dd', data[8:])
-            k = 2  # Skala obszaru śledzenia
-            bbox = (int(x - 15 * k / div), int(y - 15 * k / div), int(30 * k / div), int(30 * k / div))
-            udp_data_received = True
-            init_tracker()
-        except Exception as e:
-            print(f"Error parsing UDP data: {e}")
+        # Odczytujemy pierwsze 8 bajty jako nagłówek (opcjonalnie)
+        header = data[:8]
+        # Parsowanie liczb double z pozostałych danych
+        x, y = struct.unpack('dd', data[8:])
+        print(f"x: {x}, y: {y}")
+
+        # Obliczanie bbox
+        k = 2  # Skala obszaru śledzenia
+        bbox = (int(x - 15 * k / div), int(y - 15 * k / div), int(30 * k / div), int(30 * k / div))
+        udp_data_received = True
+        init_tracker()
 
 def detect_obstacles(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -51,7 +56,7 @@ def detect_obstacles(frame):
 
     for contour in contours:
         area = cv2.contourArea(contour)
-        if area > 10000:
+        if area > 20000:
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
             cv2.putText(frame, "Obstacle", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
@@ -65,8 +70,8 @@ def calculate_angular_deviation(frame_width, bbox):
     return angle
 
 # Inicjalizacja MAVLink i UART
-ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
-master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
+#ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
+#master = mavutil.mavlink_connection('udpout:localhost:14540', baud=baudrate)
 
 def calculate_checksum(data):
     crc = 0xFFFF
@@ -146,8 +151,8 @@ def send_GNSS(la, lo, vel, heading):
         sock2.sendto(packet, udp_target)
 
 if __name__ == '__main__':
-    # cv2.namedWindow("Tracking")
-    # cv2.setMouseCallback("Tracking", click_event)
+    udp_thread = threading.Thread(target=udp_listener, daemon=True)
+    udp_thread.start()
 
     with open("dane.txt", "w") as plik:
         plik.write("x\ty\n")
@@ -163,8 +168,8 @@ if __name__ == '__main__':
         print("Cannot read video file")
         sys.exit()
 
-    frame_width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    frame_width = 640#int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = 360#int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frame_rate = int(video.get(cv2.CAP_PROP_FPS))
     if frame_rate == 0:
         frame_rate = 30
@@ -176,7 +181,6 @@ if __name__ == '__main__':
     "videoconvert ! video/x-raw,format=I420 ! x264enc tune=zerolatency bitrate=5000 speed-preset=ultrafast ! h264parse ! rtph264pay config-interval=1 pt=96 ! "
     "udpsink host=192.168.1.104 port=5000"
 )
-
     out = cv2.VideoWriter(udp_pipeline, cv2.CAP_GSTREAMER, 0, frame_rate, (frame_width, frame_height), True)
 
     if not out.isOpened():
@@ -214,7 +218,7 @@ if __name__ == '__main__':
             angle = calculate_angular_deviation(frame_width, bbox)
             cv2.putText(frame, f"Angle: {angle:.2f} degrees", (100, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
             
-            send_angle_mavlink(ser, angle, packet_seq)
+            #send_angle_mavlink(ser, angle, packet_seq)
             send_GNSS(dataGNSS['latitude'],dataGNSS['longitude'],dataGNSS['velocity'],dataGNSS['heading'])
             packet_seq += 1
             
