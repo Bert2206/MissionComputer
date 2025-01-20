@@ -6,6 +6,7 @@ from PySide6.QtCore import QUrl, Qt, QTimer
 from PySide6.QtGui import QMouseEvent
 import pygame
 import socket
+import struct
 
 
 class VideoPlayer(QMainWindow):
@@ -86,7 +87,7 @@ class VideoPlayer(QMainWindow):
                 axis_x = 0.00
             if abs(axis_y)<0.05:
                 axis_y = 0.00
-            print(f"Joystick Axis: X={axis_x:.2f}, Y={axis_y:.2f}")
+            #print(f"Joystick Axis: X={axis_x:.2f}, Y={axis_y:.2f}")
 
             # Odczyt przycisków joysticka
             for i in range(self.joystick.get_numbuttons()):
