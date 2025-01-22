@@ -7,8 +7,8 @@ from PySide6.QtGui import QMouseEvent
 import pygame
 import socket
 import struct
-
-
+import sys
+import threading
 
 class VideoPlayer(QMainWindow):
     def __init__(self):
@@ -88,7 +88,7 @@ class VideoPlayer(QMainWindow):
                 axis_x = 0.00
             if abs(axis_y)<0.05:
                 axis_y = 0.00
-            #print(f"Joystick Axis: X={axis_x:.2f}, Y={axis_y:.2f}")
+            print(f"Joystick Axis: X={axis_x:.2f}, Y={axis_y:.2f}")
 
             # Odczyt przycisków joysticka
             for i in range(self.joystick.get_numbuttons()):
@@ -119,6 +119,16 @@ class VideoPlayer(QMainWindow):
         # Wysłanie ramki
         self.udp_socket.sendto(packet, self.udp_target)
 
+def gnss_reader():
+    UDP_IP = "192.168.1.104"
+    UDP_PORT = 12346
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+    sock.bind((UDP_IP, UDP_PORT))
+
+    while True:
+        data, addr = sock.recvfrom(4096)  # buffer size is 1024 bytes
+        lat,long,vel,head = struct.unpack('dddd', data[8:])
+        #print(f"lat: {lat}, long: {long}, vel: {vel}, head: {head}")
 
 class CustomVideoWidget(QVideoWidget):
     from PySide6.QtCore import Signal
@@ -138,7 +148,9 @@ class CustomVideoWidget(QVideoWidget):
 
 
 if __name__ == "__main__":
-    import sys
+    udp_thread = threading.Thread(target=gnss_reader, daemon=True)
+    udp_thread.start()
+
     app = QApplication(sys.argv)
     player = VideoPlayer()
     player.show()
