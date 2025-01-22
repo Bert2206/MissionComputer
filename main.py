@@ -21,10 +21,6 @@ camera_fov = 42
 target_fps = 5
 frame_duration = 1.0 / target_fps
 
-sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock2.bind(("192.168.1.121", 12345))  # KM
-udp_target = ("192.168.1.104", 12345)  # NSK
-
     
 def init_tracker():
     global tracker
@@ -32,6 +28,9 @@ def init_tracker():
     tracker.init(frame, bbox)
 
 def udp_listener():
+    sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock2.bind(("192.168.1.121", 12345))  # KM
+    udp_target = ("192.168.1.104", 12345)  # NSK
     global bbox, udp_data_received
     
     while True:
@@ -112,16 +111,13 @@ class GNSS_Emulator:
         self.heading = random.uniform(0, 360)  # 0 — ruch na polnoc, 90 — ruch na wschod, 180 — ruch na poludnie, 270 — ruch na zachod.
 
     def update_position(self):
-        # Update heading randomly to simulate a changing direction
         self.heading += random.uniform(-10, 10)  # Change heading by up to 10 degrees
         self.heading %= 360
 
-        # Update velocity randomly to simulate acceleration or deceleration
         self.velocity += random.uniform(-1, 1)* 1.94384  # zamiana z m/s na wezly
         self.velocity = max(0, min(self.velocity, 30))  # ogranicznie max 30 wezlow
 
-        # Calculate new position based on current velocity and heading
-        distance = self.velocity  # Assuming update interval of 1 second (velocity = distance / time)
+        distance = self.velocity  # 1 second (velocity = distance / time)
         delta_lat = distance * math.cos(math.radians(self.heading)) / 111320  # Convert meters to degrees latitude
         delta_lon = distance * math.sin(math.radians(self.heading)) / (111320 * math.cos(math.radians(self.latitude)))
 
@@ -138,19 +134,21 @@ class GNSS_Emulator:
         }
     
 def send_GNSS(la, lo, vel, heading):
-
-        # Send coordinates over UDP
-        source_port = 12345  #  (KM)
-        destination_port = 12345  #  (NSK)
+        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("192.168.1.121", 12346))  # KM
+        udp_target = ("192.168.1.104", 12346)  # NSK
+        source_port = 12346  #  (KM)
+        destination_port = 12346  #  (NSK)
         payload = struct.pack('dddd', float(la), float(lo), float(vel), float(heading))
         length = 8 + len(payload)  # (8 bajtow + payload)
         checksum = 0 # W naszym wypadku opcjonalna i nie wiem czy ja wykorzystac
 
         packet = struct.pack('!HHHH', source_port, destination_port, length, checksum) + payload
 
-        sock2.sendto(packet, udp_target)
+        sock.sendto(packet, udp_target)
 
-if __name__ == '__main__':
+if __name__ == '__main__':  ############################################################____MAIN______############################
     udp_thread = threading.Thread(target=udp_listener, daemon=True)
     udp_thread.start()
 
