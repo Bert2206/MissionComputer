@@ -21,7 +21,6 @@ camera_fov = 42
 target_fps = 5
 frame_duration = 1.0 / target_fps
 
-    
 def init_tracker():
     global tracker
     tracker = cv2.TrackerCSRT_create()
