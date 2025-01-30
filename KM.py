@@ -91,11 +91,13 @@ def send_angle_mavlink(ser, angle, packet_seq):
     SystemID = 3
     ComponentID = 2
     MessageID = 1
-    Payload = struct.pack('<f', angle) + b'\x00' * 4
+    Payload = struct.pack('<f', angle)
+    Payload = Payload.ljust(4, b'\x00') 
     
     # Serializacja i wysyłanie wiadomości przez UART
     packet = struct.pack('<BBBBBB', Header, PayloadLength, PacketSequence, SystemID, ComponentID, MessageID) + Payload
-
+    packet = packet.ljust(14, b'\x00')
+    
     checksum = calculate_checksum(packet[3:])
 
     packet += struct.pack('<H', checksum)
