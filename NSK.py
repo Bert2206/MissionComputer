@@ -9,6 +9,9 @@ import socket
 import struct
 import sys
 import threading
+import gi
+#gi.require_version('Gst', '1.0')
+from gi.repository import Gst, GLib
 
 class VideoPlayer(QMainWindow):
     def __init__(self):
@@ -146,8 +149,35 @@ class CustomVideoWidget(QVideoWidget):
         # Call the parent class's mousePressEvent
         super().mousePressEvent(event)
 
+def OpenGstreamer():
+    # Initialize GStreamer
+    Gst.init(None)
+
+    # Define the GStreamer pipeline (same as gst-launch-1.0 command)
+    pipeline_str = (
+        "udpsrc port=5000 ! application/x-rtp,payload=96 ! "
+        "rtph264depay ! queue leaky=2 max-size-time=40000 ! "
+        "decodebin ! videoconvert ! fpsdisplaysink video-sink=autovideosink sync=false"
+    )
+
+    # Create the pipeline
+    pipeline = Gst.parse_launch(pipeline_str)
+
+    # Start the pipeline
+    pipeline.set_state(Gst.State.PLAYING)
+
+    # Run the main loop
+    loop = GLib.MainLoop()
+    try:
+        loop.run()
+    except KeyboardInterrupt:
+        print("Shutting down...")
+        pipeline.set_state(Gst.State.NULL)
+        sys.exit(0)
+
 
 if __name__ == "__main__":
+    OpenGstreamer()
     udp_thread = threading.Thread(target=gnss_reader, daemon=True)
     udp_thread.start()
 
