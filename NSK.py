@@ -5,10 +5,16 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtCore import QUrl, Qt, QTimer
 import pygame
 import socket
+import serial
 import struct
 import sys
 import threading
+import time
 
+uart_port = '/dev/serial0'  # Port UART, COM12 u Kacpra
+baudrate = 57600
+ser = serial.Serial(uart_port, baudrate=baudrate, timeout=1)
+sq_pckt = 0
 
 class VideoPlayer(QMainWindow):
     def __init__(self):
@@ -76,16 +82,30 @@ class VideoPlayer(QMainWindow):
     def poll_joystick(self):
         if self.joystick:
             pygame.event.pump()
-            axis_x = self.joystick.get_axis(0)
-            axis_y = self.joystick.get_axis(1)
+            axis_z = self.joystick.get_axis(0)
+            axis_psi = self.joystick.get_axis(1)
+            axis_x = self.joystick.get_axis(2)
+            axis_y = self.joystick.get_axis(3)
             if abs(axis_x) < 0.05:
                 axis_x = 0.00
             if abs(axis_y) < 0.05:
                 axis_y = 0.00
-            print(f"Joystick Axis: X={axis_x:.2f}, Y={axis_y:.2f}")
+            if abs(axis_psi) < 0.05:
+                axis_psi = 0.00
+            if abs(axis_z) < 0.05:
+                axis_z = 0.00
+            
             for i in range(self.joystick.get_numbuttons()):
                 if self.joystick.get_button(i):
                     print(f"Joystick Button {i} pressed")
+            time.sleep(1)
+            #wysylanie
+            print(f"Joystick Axis: Z={axis_z:.2f}, PSI={axis_psi:.2f}, X={axis_x:.2f}, Y={axis_y:.2f}")
+            send_angle_mavlink(ser, axis_x, sq_pckt, 0)
+            send_angle_mavlink(ser, axis_y, sq_pckt, 1)
+            send_angle_mavlink(ser, axis_z, sq_pckt, 2)
+            send_angle_mavlink(ser, axis_psi, sq_pckt, 3)
+            sq_pckt = sq_pckt+1
 
     def on_pixel_clicked(self, x, y):
         print(f"Pixel clicked at: ({x}, {y})")
@@ -107,6 +127,38 @@ def gnss_reader():
         data, addr = sock.recvfrom(4096)
         lat, long, vel, head = struct.unpack('dddd', data[8:])
 
+def calculate_checksum(data):
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 0x0001:
+                crc = (crc >> 1) ^ 0x8408
+            else:
+                crc >>= 1
+    return crc & 0xFFFF
+
+def send_angle_mavlink(ser, angle, packet_seq, messID):
+    # Tworzenie wiadomości MAVLink
+    
+    Header = 0xFE
+    PayloadLength = 4
+    PacketSequence = packet_seq % 256
+    SystemID = 1
+    ComponentID = 6
+    MessageID = messID
+    Payload = struct.pack('<f', angle)
+    Payload = Payload.ljust(4, b'\x00') 
+    
+    # Serializacja i wysyłanie wiadomości przez UART
+    packet = struct.pack('<BBBBBB', Header, PayloadLength, PacketSequence, SystemID, ComponentID, MessageID) + Payload
+    packet = packet.ljust(14, b'\x00')
+    
+    checksum = calculate_checksum(packet[3:])
+
+    packet += struct.pack('<H', checksum)
+
+    ser.write(packet)
 
 class CustomVideoWidget(QVideoWidget):
     from PySide6.QtCore import Signal
