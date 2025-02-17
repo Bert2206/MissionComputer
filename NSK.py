@@ -1,15 +1,21 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QSplitter
-from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
-from PySide6.QtMultimediaWidgets import QVideoWidget
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtCore import QUrl, Qt, QTimer
+from qtpy.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QSplitter
+from qtpy.QtMultimedia import QMediaPlayer, QAudioOutput
+from qtpy.QtMultimediaWidgets import QVideoWidget
+from qtpy.QtWebEngineWidgets import QWebEngineView
+from qtpy.QtCore import QUrl, Qt, QTimer
+from pyqtlet2 import L, MapWidget
 import pygame
 import socket
 import serial
 import struct
 import sys
+import os
 import threading
 import time
+
+os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
+# Wymuszenie użycia PySide6 w pyqtlet2
+os.environ['QT_API'] = 'qtpy5'
 
 uart_port = '/dev/serial0'  # Port UART, COM12 u Kacpra
 baudrate = 57600
@@ -41,20 +47,38 @@ class VideoPlayer(QMainWindow):
         self.map_view = QWebEngineView(self)
         self.map_layout.addWidget(self.map_view)
         self.map_section.setFixedSize(640, 480)  # Set fixed size
-
+        
         # Load Google Maps
         self.map_view.setUrl(QUrl("https://www.google.com/maps"))
-        self.splitter.addWidget(self.map_section)
+
+        datatest = gnss_reader()
+        self.latitude = datatest[0]
+        self.longitude = datatest[1]
+
+        self.mapWidget = MapWidget()
+        self.map = L.map(self.mapWidget)
+        self.map.setView([self.latitude, self.longitude], 10)
+
+        self.marker = L.marker([self.latitude, self.longitude])
+        self.marker.bindPopup("Twoja lokalizacja")
+        self.map.addLayer(self.marker)
+
+        self.title = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
+        self.title.addTo(self.map)
+        #self.splitter.layout.addWidget(self.mapWidget)
+
+        self.splitter.addWidget(self.mapWidget)
 
         # Media player setup
         self.media_player = QMediaPlayer(self)
-        self.audio_output = QAudioOutput(self)
-        self.media_player.setAudioOutput(self.audio_output)
+        #self.audio_output = QAudioOutput(self)
+        #self.media_player.setAudioOutput(self.audio_output)
         self.media_player.setVideoOutput(self.video_widget)
 
         # Connect video click to function
+        #self.video_widget.pixel_clicked.connect(self.on_pixel_clicked)
         self.video_widget.pixel_clicked.connect(self.on_pixel_clicked)
-
+        #self.pixel_clicked.emit(int(x), int(y))
         # Joystick initialization
         self.init_joystick()
 
@@ -68,6 +92,10 @@ class VideoPlayer(QMainWindow):
         #self.udp_socket.bind(("192.168.1.104", 12345))  # NSK
         #self.udp_target = ("192.168.1.121", 12345)  # KM
 
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_map)
+        self.timer.start(1000)
+
     def init_joystick(self):
         pygame.init()
         pygame.joystick.init()
@@ -80,6 +108,7 @@ class VideoPlayer(QMainWindow):
             print("No joystick found.")
 
     def poll_joystick(self):
+        global sq_pckt
         if self.joystick:
             pygame.event.pump()
             axis_z = self.joystick.get_axis(0)
@@ -105,7 +134,7 @@ class VideoPlayer(QMainWindow):
             send_angle_mavlink(ser, axis_y, sq_pckt, 1)
             send_angle_mavlink(ser, axis_z, sq_pckt, 2)
             send_angle_mavlink(ser, axis_psi, sq_pckt, 3)
-            sq_pckt = sq_pckt+1
+            sq_pckt += 1
 
     def on_pixel_clicked(self, x, y):
         print(f"Pixel clicked at: ({x}, {y})")
@@ -116,7 +145,18 @@ class VideoPlayer(QMainWindow):
         checksum = 0
         packet = struct.pack('!HHHH', source_port, destination_port, length, checksum) + payload
         self.udp_socket.sendto(packet, ("192.168.1.121", 12345))
+    
+    def update_map(self):
+        datatest = gnss_reader()
+        self.latitude = datatest[0]
+        self.longitude = datatest[1]
 
+        self.map.setView([self.latitude, self.longitude], 20)
+        self.marker.setLatLng([self.latitude, self.longitude])
+
+        # Aktualizacja pól tekstowych
+        self.lat_input.setText(str(self.latitude))
+        self.lon_input.setText(str(self.longitude))
 
 def gnss_reader():
     UDP_IP = "192.168.1.104"
@@ -126,6 +166,9 @@ def gnss_reader():
     while True:
         data, addr = sock.recvfrom(4096)
         lat, long, vel, head = struct.unpack('dddd', data[8:])
+        return lat, long, vel, head
+    
+        
 
 def calculate_checksum(data):
     crc = 0xFFFF
@@ -161,13 +204,13 @@ def send_angle_mavlink(ser, angle, packet_seq, messID):
     ser.write(packet)
 
 class CustomVideoWidget(QVideoWidget):
-    from PySide6.QtCore import Signal
+    from qtpy.QtCore import Signal
     pixel_clicked = Signal(int, int)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            x = event.position().x()
-            y = event.position().y()
+            x = event.pos().x()
+            y = event.pos().y()
             self.pixel_clicked.emit(int(x), int(y))
         super().mousePressEvent(event)
 
